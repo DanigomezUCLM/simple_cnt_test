@@ -1,0 +1,56 @@
+CAPI=2:
+# Copyright 2024 Politecnico di Torino.
+# Solderpad Hardware License, Version 2.1, see LICENSE.md for details.
+# SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+#
+# File: cnt.core
+# Author: Luigi Giuffrida
+# Date: 03/10/2024
+# Description: corefile for counter
+
+
+name: polito:isa_lab:cnt
+description: Basic example of a counter
+
+filesets:
+  rtl:
+    files:
+    - rtl/cnt.sv
+    file_type: systemVerilogSource
+
+  verilator-tb:
+    files:
+    - tb/cnt_tb.cpp
+    file_type: cppSource
+
+targets:
+  default: &default
+    filesets:
+    - rtl
+  
+  sim:
+    <<: *default
+    description: Simulate the design
+    default_tool: verilator
+    toplevel: cnt
+    filesets_append:
+    - verilator-tb
+    tools:
+      verilator:
+        mode: cc
+        verilator_options:
+        - '--cc'
+        - '--assert'
+        - '--trace'
+        - '--trace-fst'
+        - '--trace-structs'
+        - '--trace-max-array 128'
+        - '--x-assign unique'
+        - '--x-initial unique'
+        #- '--threads 2' # only use with Verilator v5.XXX
+        - '--exe'
+        - 'cnt_tb.cpp'
+        - '-Wall'
+        - '-Wpedantic'
+        - '-LDFLAGS "-pthread -lutil -lelf"'
+        # - '-CFLAGS "-Wall -g"'

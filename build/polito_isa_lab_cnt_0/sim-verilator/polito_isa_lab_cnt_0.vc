@@ -1,6 +1,0 @@
---Mdir .
---cc
-../../../rtl/cnt.sv
---top-module cnt
---exe
-../../../tb/cnt_tb.cpp

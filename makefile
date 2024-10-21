@@ -48,4 +48,10 @@ verilator-run:
 	$(FUSESOC) run --no-export --target sim --tool verilator --run $(FUSESOC_FLAGS) polito:isa_lab:cnt \
 		$(FUSESOC_ARGS)
 
+# ----- HELPERS ----- #
 
+## @section Helpers
+
+.PHONY: clean
+clean:
+	rm -rf $(BUILD_DIR)

@@ -5,5 +5,5 @@ Just a counter
 ## TODO:
 
 - [x] Verilator SIM
-- [] Questasim SIM
-- [] Register interface
+- [ ] Questasim SIM
+- [ ] Register interface

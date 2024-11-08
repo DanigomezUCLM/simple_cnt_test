@@ -8,5 +8,6 @@ _TODO_
 ## TODO:
 
 - [x] Verilator SIM
+- [ ] Register description
 - [ ] Questasim SIM
 - [x] Register interface

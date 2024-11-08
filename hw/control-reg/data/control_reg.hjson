@@ -88,23 +88,5 @@
             swaccess: "rw",
             hwaccess: "hro",
         },
-        {
-            name: "COUNT",
-            desc: "Current counter value",
-            hwext: "true",
-            fields: [
-                {
-                    bits: "31:0",
-                    name: "COUNT",
-                    desc: '''
-                        The current value of the counter (read-only). Incremented at every clock tick if the ENABLE bit is set. Reset when CLEAR is set or upon crossing THRESHOLD.
-                    ''',
-                    swaccess: "ro",
-                    hwaccess: "hwo",
-                },
-            ],
-            swaccess: "ro",
-            hwaccess: "hwo",
-        },
     ],
 }

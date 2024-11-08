@@ -23,7 +23,6 @@ module cnt_control_reg (
   output cnt_reg_pkg::reg_resp_t rsp_o,  // to host system
 
   // Counter control signals
-  input  logic [31:0] cnt_val_i,  // current counter value
   input  logic        cnt_tc_i,   // counter terminal count
   output logic        cnt_en_o,   // counter enable
   output logic        cnt_clr_o,  // counter clear
@@ -45,7 +44,6 @@ module cnt_control_reg (
   // cleared when the counter is cleared.
   assign hw2reg.status.d         = cnt_tc_i & ~reg2hw.control.clear.q;
   assign hw2reg.status.de        = cnt_tc_i || reg2hw.control.clear.q;
-  assign hw2reg.count.d          = cnt_val_i;
 
   // Always auto-reset the clear bit
   assign hw2reg.control.clear.d  = 1'b0;

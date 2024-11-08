@@ -27,9 +27,6 @@ extern "C" {
 // Counter threshold value
 #define CNT_CONTROL_THRESHOLD_REG_OFFSET 0x8
 
-// Current counter value
-#define CNT_CONTROL_COUNT_REG_OFFSET 0xc
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif

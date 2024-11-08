@@ -185,14 +185,8 @@ int main(int argc, char *argv[])
             
             // Read the current counter value
             case 2:
-                if (!req_accepted) {
-                    TB_LOG(LOG_HIGH, "## Reading counter value...");
-                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
-                    break;
-                }
-                scb->scheduleCheck(0);
-                req_accepted = false;
-                step_cnt++; // and fall through
+                step_cnt++;
+                break;
 
             // Read the TC bit
             case 3:
@@ -234,13 +228,8 @@ int main(int argc, char *argv[])
 
             // Read counter value
             case 11:
-                if (!req_accepted) {
-                    TB_LOG(LOG_HIGH, "## Reading counter value...");
-                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
-                    break;
-                }
-                req_accepted = false;
-                step_cnt++; // and fall through
+                step_cnt++;
+                break;
 
             // Wait for interrupt
             case 12:
@@ -250,14 +239,8 @@ int main(int argc, char *argv[])
 
             // Read counter value
             case 13:
-                if (!req_accepted) {
-                    TB_LOG(LOG_HIGH, "## Reading counter value...");
-                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
-                    break;
-                }
-                scb->scheduleCheck(0);
-                req_accepted = false;
-                step_cnt++; // and fall through
+                step_cnt++;
+                break;
 
             // Disable the counter
             case 14:
@@ -277,14 +260,8 @@ int main(int argc, char *argv[])
 
             // Read the counter value
             case 20:
-                if (!req_accepted) {
-                    TB_LOG(LOG_HIGH, "## Reading counter value...");
-                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
-                    break;
-                }
-                scb->scheduleCheck(2);
-                req_accepted = false;
-                step_cnt++; // and fall through
+                step_cnt++;
+                break;
 
             // Read the TC bit
             case 21:
@@ -315,14 +292,8 @@ int main(int argc, char *argv[])
 
             // Read the counter value
             case 24:
-                if (!req_accepted) {
-                    TB_LOG(LOG_HIGH, "## Reading counter value...");
-                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
-                    break;
-                }
-                scb->scheduleCheck(0);
-                req_accepted = false;
-                step_cnt++; // and fall through
+                step_cnt++;
+                break;
 
             // Wait some cycles
             case 25 ... 29:

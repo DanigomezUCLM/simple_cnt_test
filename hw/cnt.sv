@@ -22,11 +22,13 @@ module cnt #(
   input logic clk_i,
   input logic rst_ni,
 
-  input  logic         en_i,   // counter enable
-  input  logic         clr_i,  // reset counter to zero
-  input  logic [W-1:0] thr_i,  // counter threshold
-  output logic [W-1:0] cnt_o,  // current counter value
-  output logic         tc_o    // threshold crossed
+  input  logic         en_i,      // counter enable
+  input  logic         clr_i,     // reset counter to zero
+  input  logic         ld_i,      // counter load
+  input  logic [W-1:0] ld_val_i,  // value to load
+  input  logic [W-1:0] thr_i,     // counter threshold
+  output logic [W-1:0] cnt_o,     // current counter value
+  output logic         tc_o       // threshold crossed
 );
   // INTERNAL SIGNALS
   logic [W-1:0] cnt_val;  // current counter value
@@ -37,6 +39,7 @@ module cnt #(
     if (!rst_ni) cnt_val <= 'h0;
     else begin  // synchronous clear and count
       if (clr_i) cnt_val <= 'h0;
+      else if (ld_i) cnt_val <= ld_val_i;
       else if (en_i) begin
         if (tc) cnt_val <= 'h0;
         else cnt_val <= cnt_val + 'h1;

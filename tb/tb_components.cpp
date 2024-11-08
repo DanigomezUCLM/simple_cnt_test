@@ -4,6 +4,7 @@
 ReqTx::ReqTx()
 {
     this->obi_req = {0};
+    this->reg_req = {0};
 }
 
 ReqTx::~ReqTx()
@@ -13,6 +14,7 @@ ReqTx::~ReqTx()
 void ReqTx::reset()
 {
     this->obi_req = {0};
+    this->reg_req = {0};
 }
 
 RspTx::RspTx()
@@ -34,15 +36,15 @@ Drv::~Drv()
 
 void Drv::drive(ReqTx *req)
 {
-    this->dut->bus_req_i = 0;
+    this->dut->reg_valid_i = 0;
 
     if (req != NULL)
     {
-        this->dut->bus_req_i = req->obi_req.req;
-        this->dut->bus_we_i = req->obi_req.we;
-        this->dut->bus_be_i = req->obi_req.be;
-        this->dut->bus_addr_i = req->obi_req.addr;
-        this->dut->bus_wdata_i = req->obi_req.wdata;
+        this->dut->reg_valid_i = req->reg_req.valid;
+        this->dut->reg_write_i = req->reg_req.write;
+        this->dut->reg_wstrb_i = req->reg_req.wstrb;
+        this->dut->reg_addr_i = req->reg_req.addr;
+        this->dut->reg_wdata_i = req->reg_req.wdata;
     }
 }
 
@@ -108,9 +110,9 @@ int Scb::checkData()
 
     // Check that the received data has the expected value
     this->tx_num++;
-    if (rsp->obi_rsp.rdata != exp_value)
+    if (rsp->reg_rsp.rdata != exp_value)
     {
-        TB_ERR("SCB > Received data (0x%08x) does not match the expected value (0x%08x)", rsp->obi_rsp.rdata, exp_value);
+        TB_ERR("SCB > Received data (0x%08x) does not match the expected value (0x%08x)", rsp->reg_rsp.rdata, exp_value);
         this->err_num++;
         delete rsp;
         return -1;
@@ -119,7 +121,7 @@ int Scb::checkData()
     // Reduce verbosity if data is zero
     if (exp_value == 0) log_lvl = LOG_HIGH;
     
-    TB_SUCCESS(log_lvl, "SCB > Received data: 0x%08x (expected: 0x%08x)", rsp->obi_rsp.rdata, exp_value);
+    TB_SUCCESS(log_lvl, "SCB > Received data: 0x%08x (expected: 0x%08x)", rsp->reg_rsp.rdata, exp_value);
 
     // Clean up
     delete rsp;
@@ -190,18 +192,18 @@ void ReqMonitor::monitor()
     log_lvl_t log_lvl = LOG_HIGH;
 
     // Check if there's a new request
-    if (dut->bus_req_i && dut->bus_gnt_o)
+    if (dut->reg_valid_i && dut->reg_ready_o)
     {
         // Fetch the data from the DUT interface
         ReqTx *req = new ReqTx();
-        req->obi_req.req = dut->bus_req_i;
-        req->obi_req.we = dut->bus_we_i;
-        req->obi_req.be = dut->bus_be_i;
-        req->obi_req.addr = dut->bus_addr_i;
-        req->obi_req.wdata = dut->bus_wdata_i;
+        req->reg_req.valid = dut->reg_valid_i;
+        req->reg_req.write = dut->reg_write_i;
+        req->reg_req.wstrb = dut->reg_wstrb_i;
+        req->reg_req.addr = dut->reg_addr_i;
+        req->reg_req.wdata = dut->reg_wdata_i;
 
         // Print the request content
-        TB_LOG(LOG_HIGH, "REQ > %-5s | req: %u | we: %u | be: 0x%1x | addr: 0x%08x | wdata: 0x%08x", (req->obi_req.we) ? "WRITE" : "READ", req->obi_req.req, req->obi_req.we, req->obi_req.be, req->obi_req.addr, req->obi_req.wdata);
+        TB_LOG(LOG_HIGH, "REG REQ > %-5s | valid: %u | write: %u | wstrb: 0x%1x | addr: 0x%08x | wdata: 0x%08x", (req->reg_req.write) ? "WRITE" : "READ", req->reg_req.valid, req->reg_req.write, req->reg_req.wstrb, req->reg_req.addr, req->reg_req.wdata);
         
         // Send the request to the scoreboard
         delete req;
@@ -210,7 +212,7 @@ void ReqMonitor::monitor()
 
 bool ReqMonitor::accepted()
 {
-    return dut->bus_req_i & dut->bus_gnt_o;
+    return dut->reg_valid_i & dut->reg_ready_o;
 }
 
 RspMonitor::RspMonitor(Vcnt_obi *dut, Scb *scb)
@@ -230,10 +232,10 @@ RspMonitor::~RspMonitor()
 void RspMonitor::monitor()
 {
     // Check for new read request
-    bool new_read_req = dut->bus_req_i & dut->bus_gnt_o & !dut->bus_we_i;
+    bool new_read_req = dut->obi_req_i & dut->obi_gnt_o & !dut->obi_we_i;
     
     // Check for correctly delivered response
-    if (this->pending_read_req[1] && !dut->bus_rvalid_o && dut->bus_req_i & dut->bus_gnt_o)
+    if (this->pending_read_req[1] && !dut->obi_rvalid_o && dut->obi_req_i & dut->obi_gnt_o)
     {
         TB_ERR("RSP > Response not delivered");
         this->scb->notifyError();
@@ -245,7 +247,7 @@ void RspMonitor::monitor()
     }
 
     // Ignore the response if there's no pending read request
-    if (!this->pending_read_req || !dut->bus_rvalid_o) 
+    if (!this->pending_read_req[0] || !dut->obi_rvalid_o) 
     {
         this->pending_read_req[1] = this->pending_read_req[0];
         this->pending_read_req[0] = new_read_req;
@@ -254,11 +256,11 @@ void RspMonitor::monitor()
     
     // Fetch the data from the DUT interface
     RspTx *rsp = new RspTx();
-    rsp->obi_rsp.rvalid = dut->bus_rvalid_o;
-    rsp->obi_rsp.rdata = dut->bus_rdata_o;
+    rsp->obi_rsp.rvalid = dut->obi_rvalid_o;
+    rsp->obi_rsp.rdata = dut->obi_rdata_o;
 
     // Print the response content
-    TB_LOG(LOG_HIGH, "RSP > rvalid: %u | rdata: 0x%08x", rsp->obi_rsp.rvalid, rsp->obi_rsp.rdata);
+    TB_LOG(LOG_HIGH, "OBI RSP > rvalid: %u | rdata: 0x%08x", rsp->obi_rsp.rvalid, rsp->obi_rsp.rdata);
 
     // Send the response to the scoreboard
     this->scb->writeRsp(rsp);
@@ -270,7 +272,7 @@ void RspMonitor::monitor()
 
 bool RspMonitor::isDataReady()
 {
-    return this->dut->bus_rvalid_o;
+    return this->dut->obi_rvalid_o;
 }
 
 bool RspMonitor::irq()
@@ -280,5 +282,5 @@ bool RspMonitor::irq()
 
 vluint32_t RspMonitor::getData()
 {
-    return dut->bus_rdata_o;
+    return dut->obi_rdata_o;
 }

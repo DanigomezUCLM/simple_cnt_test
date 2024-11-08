@@ -32,8 +32,6 @@ package cnt_control_reg_pkg;
     logic de;
   } cnt_control_hw2reg_status_reg_t;
 
-  typedef struct packed {logic [31:0] d;} cnt_control_hw2reg_count_reg_t;
-
   // Register -> HW type
   typedef struct packed {
     cnt_control_reg2hw_control_reg_t   control;    // [33:32]
@@ -42,34 +40,27 @@ package cnt_control_reg_pkg;
 
   // HW -> register type
   typedef struct packed {
-    cnt_control_hw2reg_control_reg_t control;  // [35:34]
-    cnt_control_hw2reg_status_reg_t  status;   // [33:32]
-    cnt_control_hw2reg_count_reg_t   count;    // [31:0]
+    cnt_control_hw2reg_control_reg_t control;  // [3:2]
+    cnt_control_hw2reg_status_reg_t  status;   // [1:0]
   } cnt_control_hw2reg_t;
 
   // Register offsets
   parameter logic [BlockAw-1:0] CNT_CONTROL_CONTROL_OFFSET = 4'h0;
   parameter logic [BlockAw-1:0] CNT_CONTROL_STATUS_OFFSET = 4'h4;
   parameter logic [BlockAw-1:0] CNT_CONTROL_THRESHOLD_OFFSET = 4'h8;
-  parameter logic [BlockAw-1:0] CNT_CONTROL_COUNT_OFFSET = 4'hc;
-
-  // Reset values for hwext registers and their fields
-  parameter logic [31:0] CNT_CONTROL_COUNT_RESVAL = 32'h0;
 
   // Register index
   typedef enum int {
     CNT_CONTROL_CONTROL,
     CNT_CONTROL_STATUS,
-    CNT_CONTROL_THRESHOLD,
-    CNT_CONTROL_COUNT
+    CNT_CONTROL_THRESHOLD
   } cnt_control_id_e;
 
   // Register width information to check illegal writes
-  parameter logic [3:0] CNT_CONTROL_PERMIT[4] = '{
+  parameter logic [3:0] CNT_CONTROL_PERMIT[3] = '{
       4'b0001,  // index[0] CNT_CONTROL_CONTROL
       4'b0001,  // index[1] CNT_CONTROL_STATUS
-      4'b1111,  // index[2] CNT_CONTROL_THRESHOLD
-      4'b1111  // index[3] CNT_CONTROL_COUNT
+      4'b1111  // index[2] CNT_CONTROL_THRESHOLD
   };
 
 endpackage

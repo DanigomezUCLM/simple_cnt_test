@@ -20,11 +20,13 @@
 #include <verilated.h>
 #include "Vcnt_obi.h"
 #include "obi.hh"
+#include "reg.hh"
 
 class ReqTx
 {
 public:
     obi_req_t obi_req;
+    reg_req_t reg_req;
 
     ReqTx();
     ~ReqTx();
@@ -36,6 +38,7 @@ class RspTx
 {
 public:
     obi_rsp_t obi_rsp;
+    reg_rsp_t reg_rsp;
 
     RspTx();
     ~RspTx();

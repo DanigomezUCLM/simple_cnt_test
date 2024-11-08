@@ -80,8 +80,6 @@ module cnt_control_reg_top #(
   logic [31:0] threshold_qs;
   logic [31:0] threshold_wd;
   logic        threshold_we;
-  logic [31:0] count_qs;
-  logic        count_re;
 
   // Register instances
   // R[control]: V(False)
@@ -192,31 +190,14 @@ module cnt_control_reg_top #(
   );
 
 
-  // R[count]: V(True)
-
-  prim_subreg_ext #(
-    .DW(32)
-  ) u_count (
-    .re (count_re),
-    .we (1'b0),
-    .wd ('0),
-    .d  (hw2reg.count.d),
-    .qre(),
-    .qe (),
-    .q  (),
-    .qs (count_qs)
-  );
 
 
-
-
-  logic [3:0] addr_hit;
+  logic [2:0] addr_hit;
   always_comb begin
     addr_hit    = '0;
     addr_hit[0] = (reg_addr == CNT_CONTROL_CONTROL_OFFSET);
     addr_hit[1] = (reg_addr == CNT_CONTROL_STATUS_OFFSET);
     addr_hit[2] = (reg_addr == CNT_CONTROL_THRESHOLD_OFFSET);
-    addr_hit[3] = (reg_addr == CNT_CONTROL_COUNT_OFFSET);
   end
 
   assign addrmiss = (reg_re || reg_we) ? ~|addr_hit : 1'b0;
@@ -226,8 +207,7 @@ module cnt_control_reg_top #(
     wr_err = (reg_we &
               ((addr_hit[0] & (|(CNT_CONTROL_PERMIT[0] & ~reg_be))) |
                (addr_hit[1] & (|(CNT_CONTROL_PERMIT[1] & ~reg_be))) |
-               (addr_hit[2] & (|(CNT_CONTROL_PERMIT[2] & ~reg_be))) |
-               (addr_hit[3] & (|(CNT_CONTROL_PERMIT[3] & ~reg_be)))));
+               (addr_hit[2] & (|(CNT_CONTROL_PERMIT[2] & ~reg_be)))));
   end
 
   assign control_enable_we = addr_hit[0] & reg_we & !reg_error;
@@ -241,8 +221,6 @@ module cnt_control_reg_top #(
 
   assign threshold_we      = addr_hit[2] & reg_we & !reg_error;
   assign threshold_wd      = reg_wdata[31:0];
-
-  assign count_re          = addr_hit[3] & reg_re & !reg_error;
 
   // Read data return
   always_comb begin
@@ -259,10 +237,6 @@ module cnt_control_reg_top #(
 
       addr_hit[2]: begin
         reg_rdata_next[31:0] = threshold_qs;
-      end
-
-      addr_hit[3]: begin
-        reg_rdata_next[31:0] = count_qs;
       end
 
       default: begin

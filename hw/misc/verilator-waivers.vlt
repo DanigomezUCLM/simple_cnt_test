@@ -27,3 +27,4 @@ lint_off -rule WIDTHEXPAND -file "*/prim_subreg_arb.sv" -match "Operator EQ expe
 // OBI bridge
 lint_off -rule UNUSEDSIGNAL -file "*/cnt_obi_to_reg.sv" -match "Bits of signal are not used: *"
 lint_off -rule UNUSEDSIGNAL -file "*/cnt_obi.sv" -match "Bits of signal are not used: 'cnt_thr'*"
+lint_off -rule UNUSEDSIGNAL -file "*/cnt_obi.sv" -match "Bits of signal are not used: 'obi_wdata_i'*"

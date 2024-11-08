@@ -2,7 +2,7 @@
 
 Simple software-controlled up counter with OBI bus interface.
 
-# Register layout
+## Register layout
 _TODO_
 
 ## TODO:

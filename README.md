@@ -1,9 +1,12 @@
 # Simple example repository
 
-Just a counter
+Simple software-controlled up counter with OBI bus interface.
+
+# Register layout
+_TODO_
 
 ## TODO:
 
 - [x] Verilator SIM
 - [ ] Questasim SIM
-- [ ] Register interface
+- [x] Register interface

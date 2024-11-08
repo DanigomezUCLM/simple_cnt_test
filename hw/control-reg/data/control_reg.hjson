@@ -57,17 +57,16 @@
         {
             name: "STATUS",
             desc: "Counter status register",
-            hwext: "true",
             fields: [
                 {
                     bits: "0",
                     name: "TC",
                     desc: '''
-                        Set when the counter reaches the specified threshold value (see below). Cleared by writing a 0 to this bit.
+                        Set when the counter reaches the specified threshold value (see below). Cleared by reading it. NOTE: this bit is set one cycle after the counter reaches the threshold value. For precise timing, use the hardware interrupt.
                     ''',
                 },
             ],
-            swaccess: "ro",
+            swaccess: "rw1c",
             hwaccess: "hwo",
             resval: "0",
         },

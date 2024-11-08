@@ -41,7 +41,10 @@ module cnt_control_reg (
   // CONTROL REGISTERS
   // -----------------
   // Counter terminal count
-  assign hw2reg.status.d         = cnt_tc_i;
+  // NOTE: The threshold is set when the counter crosses the threshold, and
+  // cleared when the counter is cleared.
+  assign hw2reg.status.d         = cnt_tc_i & ~reg2hw.control.clear.q;
+  assign hw2reg.status.de        = cnt_tc_i || reg2hw.control.clear.q;
   assign hw2reg.count.d          = cnt_val_i;
 
   // Always auto-reset the clear bit

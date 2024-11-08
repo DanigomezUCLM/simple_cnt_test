@@ -105,6 +105,7 @@ targets:
       post_run:
       - copy_waves
     parameters:
+      - W=16
       - tool_verilator ? (log_level)
     tools:
       verilator:
@@ -169,3 +170,9 @@ parameters:
       Set the log level. Admitted values: LOG_NONE|LOG_LOW|LOG_MEDIUM|LOG_HIGH|LOG_FULL|LOG_DEBUG. 
       Errors and configuration messages are always printed.
     paramtype: cmdlinearg
+  W:
+    datatype: int
+    description: |
+      Set the counter bitwidth. Maximum 32.
+    default: 32
+    paramtype: vlogparam

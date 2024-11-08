@@ -38,7 +38,7 @@
 #define END_OF_RESET_TIME 5
 #define MAX_SIM_CYCLES 2e6
 #define MAX_SIM_TIME (MAX_SIM_CYCLES * 2)
-#define WATCHDOG_TIMEOUT 500 // cycles to wait for a program step to complete
+#define WATCHDOG_TIMEOUT 100 // cycles to wait for a program step to complete
 #define END_OF_TEST_TIMEOUT 10 // cycles between done assertion and simulation end
 #define RUN_CYCLES 500
 
@@ -143,7 +143,8 @@ int main(int argc, char *argv[])
     bool req_accepted = false; // OBI request accepted flag
     bool irq_received = false; // interrupt received flag
     vluint32_t data = 0;
-    vluint32_t thr = rand() % 64;
+    vluint32_t rdata = 0;
+    vluint32_t thr = rand() % 63 + 1;
     ReqTx *req = NULL;
 
     TB_LOG(LOG_LOW, "Starting simulation...");
@@ -285,8 +286,19 @@ int main(int argc, char *argv[])
                 req_accepted = false;
                 step_cnt++; // and fall through
 
-            // Clear the counter
+            // Read the TC bit
             case 21:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading TC bit...");
+                    req = genReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                    break;
+                }
+                scb->scheduleCheck(1);
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Clear the counter
+            case 22:
                 if (!req_accepted) {
                     TB_LOG(LOG_HIGH, "## Clearing counter...");
                     data = 1 << CNT_CONTROL_CONTROL_CLEAR_BIT;
@@ -297,12 +309,12 @@ int main(int argc, char *argv[])
                 step_cnt++; // and fall through
 
             // Wait one cycle
-            case 22:
+            case 23:
                 step_cnt++;
                 break;
 
             // Read the counter value
-            case 23:
+            case 24:
                 if (!req_accepted) {
                     TB_LOG(LOG_HIGH, "## Reading counter value...");
                     req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
@@ -313,9 +325,74 @@ int main(int argc, char *argv[])
                 step_cnt++; // and fall through
 
             // Wait some cycles
-            case 24 ... 29:
+            case 25 ... 29:
                 step_cnt++;
                 break;
+
+            // Set a new threshold
+            case 30:
+                if (!req_accepted) {
+                    thr = rand() % 63 + 1;
+                    TB_LOG(LOG_HIGH, "## Writing counter threshold to '%u'...", thr);
+                    req = genWriteReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET, thr, 0xf);
+                    break;
+                }
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Read back the threshold value
+            case 31:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter threshold...");
+                    req = genReadReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET);
+                    break;
+                }
+                scb->scheduleCheck(thr);
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Restart the counter
+            case 32:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Enabling counter...");
+                    data = 1 << CNT_CONTROL_CONTROL_ENABLE_BIT;
+                    req = genWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    break;
+                }
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Wait for TC in polling
+            case 33:
+                if (!req_accepted) {
+                    TB_LOG(LOG_FULL, "## Polling TC bit...");
+                    req = genReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                    break;
+                }
+                req_accepted = false;
+                step_cnt++; // and fall through
+            
+            // Wait for TC in polling
+            case 34:
+                if (rdata & (1 << CNT_CONTROL_STATUS_TC_BIT)) {
+                    TB_LOG(LOG_LOW, "## TC bit set!");
+                    step_cnt++;
+                    break;
+                }
+                TB_LOG(LOG_FULL, "## Polling TC bit...");
+                req = genReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                break;
+
+            // Clear TC bit
+            case 35:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Clearing TC bit...");
+                    data = 1 << CNT_CONTROL_STATUS_TC_BIT;
+                    req = genWriteReqTx(CNT_CONTROL_STATUS_REG_OFFSET, data, 0x1);
+                    break;
+                }
+                req_accepted = false;
+                step_cnt++; // and fall through
 
             default:
                 // Set exit flag
@@ -334,6 +411,7 @@ int main(int argc, char *argv[])
             // Monitor DUT signals
             reqMon->monitor();
             rspMon->monitor();
+            if (rspMon->isDataReady()) rdata = rspMon->getData();
             req_accepted = reqMon->accepted();
             irq_received = rspMon->irq();
 

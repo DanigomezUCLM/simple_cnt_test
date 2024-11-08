@@ -75,7 +75,8 @@ module cnt_control_reg_top #(
   logic        control_clear_wd;
   logic        control_clear_we;
   logic        status_qs;
-  logic        status_re;
+  logic        status_wd;
+  logic        status_we;
   logic [31:0] threshold_qs;
   logic [31:0] threshold_wd;
   logic        threshold_we;
@@ -137,19 +138,30 @@ module cnt_control_reg_top #(
   );
 
 
-  // R[status]: V(True)
+  // R[status]: V(False)
 
-  prim_subreg_ext #(
-    .DW(1)
+  prim_subreg #(
+    .DW      (1),
+    .SWACCESS("W1C"),
+    .RESVAL  (1'h0)
   ) u_status (
-    .re (status_re),
-    .we (1'b0),
-    .wd ('0),
-    .d  (hw2reg.status.d),
-    .qre(),
-    .qe (),
-    .q  (),
-    .qs (status_qs)
+    .clk_i (clk_i),
+    .rst_ni(rst_ni),
+
+    // from register interface
+    .we(status_we),
+    .wd(status_wd),
+
+    // from internal hardware
+    .de(hw2reg.status.de),
+    .d (hw2reg.status.d),
+
+    // to internal hardware
+    .qe(),
+    .q (),
+
+    // to register interface (read)
+    .qs(status_qs)
   );
 
 
@@ -224,7 +236,8 @@ module cnt_control_reg_top #(
   assign control_clear_we  = addr_hit[0] & reg_we & !reg_error;
   assign control_clear_wd  = reg_wdata[1];
 
-  assign status_re         = addr_hit[1] & reg_re & !reg_error;
+  assign status_we         = addr_hit[1] & reg_we & !reg_error;
+  assign status_wd         = reg_wdata[0];
 
   assign threshold_we      = addr_hit[2] & reg_we & !reg_error;
   assign threshold_wd      = reg_wdata[31:0];

@@ -22,6 +22,8 @@ lint_off -rule UNUSEDPARAM -file "*/cnt_control_reg_pkg.sv" -match "Parameter is
 
 // PULP files
 lint_off -rule PINCONNECTEMPTY -file "*/prim_subreg_shadow.sv" -match "Cell pin connected by name with empty reference: '*'"
+lint_off -rule WIDTHEXPAND -file "*/prim_subreg_arb.sv" -match "Operator EQ expects 24 bits on the LHS, but LHS's VARREF 'SWACCESS' generates 16 bits."
 
 // OBI bridge
 lint_off -rule UNUSEDSIGNAL -file "*/cnt_obi_to_reg.sv" -match "Bits of signal are not used: *"
+lint_off -rule UNUSEDSIGNAL -file "*/cnt_obi.sv" -match "Bits of signal are not used: 'cnt_thr'*"

@@ -27,7 +27,10 @@ package cnt_control_reg_pkg;
     } clear;
   } cnt_control_hw2reg_control_reg_t;
 
-  typedef struct packed {logic d;} cnt_control_hw2reg_status_reg_t;
+  typedef struct packed {
+    logic d;
+    logic de;
+  } cnt_control_hw2reg_status_reg_t;
 
   typedef struct packed {logic [31:0] d;} cnt_control_hw2reg_count_reg_t;
 
@@ -39,8 +42,8 @@ package cnt_control_reg_pkg;
 
   // HW -> register type
   typedef struct packed {
-    cnt_control_hw2reg_control_reg_t control;  // [34:33]
-    cnt_control_hw2reg_status_reg_t  status;   // [32:32]
+    cnt_control_hw2reg_control_reg_t control;  // [35:34]
+    cnt_control_hw2reg_status_reg_t  status;   // [33:32]
     cnt_control_hw2reg_count_reg_t   count;    // [31:0]
   } cnt_control_hw2reg_t;
 
@@ -51,8 +54,6 @@ package cnt_control_reg_pkg;
   parameter logic [BlockAw-1:0] CNT_CONTROL_COUNT_OFFSET = 4'hc;
 
   // Reset values for hwext registers and their fields
-  parameter logic [0:0] CNT_CONTROL_STATUS_RESVAL = 1'h0;
-  parameter logic [0:0] CNT_CONTROL_STATUS_TC_RESVAL = 1'h0;
   parameter logic [31:0] CNT_CONTROL_COUNT_RESVAL = 32'h0;
 
   // Register index

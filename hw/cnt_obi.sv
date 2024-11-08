@@ -42,7 +42,8 @@ module cnt_obi #(
   // Registers <--> Hanrdware counter
   logic                          cnt_en;
   logic                          cnt_clr;
-  logic                   [31:0] cnt_val;
+  logic                  [W-1:0] cnt_val;
+  logic                   [31:0] cnt_val_ext;
   logic                   [31:0] cnt_thr;
   logic                          cnt_tc;
 
@@ -57,7 +58,7 @@ module cnt_obi #(
     .rst_ni(rst_ni),
     .en_i  (cnt_en),
     .clr_i (cnt_clr),
-    .thr_i (cnt_thr),
+    .thr_i (cnt_thr[W-1:0]),
     .cnt_o (cnt_val),
     .tc_o  (cnt_tc)
   );
@@ -77,13 +78,16 @@ module cnt_obi #(
           wdata: bus_wdata_i
       };
 
+  // Zero-extended counter value
+  assign cnt_val_ext = {{32-W{1'b0}}, cnt_val};
+
   // Control registers
   cnt_control_reg u_cnt_control_reg (
     .clk_i    (clk_i),
     .rst_ni   (rst_ni),
     .req_i    (bus_req),
     .rsp_o    (bus_rsp),
-    .cnt_val_i(cnt_val),
+    .cnt_val_i(cnt_val_ext),
     .cnt_tc_i (cnt_tc),
     .cnt_en_o (cnt_en),
     .cnt_clr_o(cnt_clr),

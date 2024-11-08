@@ -39,7 +39,7 @@ verilator-build:
 
 ## Build and run simulation
 .PHONY: verilator-sim
-verilator-sim: verilator-build
+verilator-sim: | verilator-build
 	$(FUSESOC) run --no-export --target sim --tool verilator --run $(FUSESOC_FLAGS) polito:isa-lab:cnt \
 		--log_level $(LOG_LEVEL)
 		$(FUSESOC_ARGS)
@@ -52,9 +52,9 @@ verilator-run:
 		$(FUSESOC_ARGS)
 
 # Open waveform dump with GTKWave
-.PHONY: verilator-wave
-verilator-wave: .check-gtkwave
-	gtkwave -a tb/waves.gtkw $(BUILD_DIR)/sim-common/waves.fst
+.PHONY: waves
+waves: $(BUILD_DIR)/sim-common/waves.fst | .check-gtkwave
+	gtkwave -a tb/waves.gtkw $<
 
 ## @section Hardware generation
 

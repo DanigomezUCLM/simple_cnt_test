@@ -20,6 +20,13 @@ package cnt_control_reg_pkg;
 
   typedef struct packed {logic [31:0] q;} cnt_control_reg2hw_threshold_reg_t;
 
+  typedef struct packed {
+    struct packed {
+      logic d;
+      logic de;
+    } clear;
+  } cnt_control_hw2reg_control_reg_t;
+
   typedef struct packed {logic d;} cnt_control_hw2reg_status_reg_t;
 
   typedef struct packed {logic [31:0] d;} cnt_control_hw2reg_count_reg_t;
@@ -32,8 +39,9 @@ package cnt_control_reg_pkg;
 
   // HW -> register type
   typedef struct packed {
-    cnt_control_hw2reg_status_reg_t status;  // [32:32]
-    cnt_control_hw2reg_count_reg_t  count;   // [31:0]
+    cnt_control_hw2reg_control_reg_t control;  // [34:33]
+    cnt_control_hw2reg_status_reg_t  status;   // [32:32]
+    cnt_control_hw2reg_count_reg_t   count;    // [31:0]
   } cnt_control_hw2reg_t;
 
   // Register offsets

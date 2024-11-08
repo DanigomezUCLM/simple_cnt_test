@@ -46,8 +46,8 @@
                     desc: '''
                         When this bit is set to one by software, the counter value is reset to zero. Default: 0.
                     ''',
-                    swaccess: "rw0c",
-                    hwaccess: "hro",
+                    swaccess: "rw",
+                    hwaccess: "hrw",
                 },
             ],
             swaccess: "rw",

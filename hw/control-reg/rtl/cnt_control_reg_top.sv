@@ -114,7 +114,7 @@ module cnt_control_reg_top #(
   //   F[clear]: 1:1
   prim_subreg #(
     .DW      (1),
-    .SWACCESS("W0C"),
+    .SWACCESS("RW"),
     .RESVAL  (1'h0)
   ) u_control_clear (
     .clk_i (clk_i),
@@ -125,8 +125,8 @@ module cnt_control_reg_top #(
     .wd(control_clear_wd),
 
     // from internal hardware
-    .de(1'b0),
-    .d ('0),
+    .de(hw2reg.control.clear.de),
+    .d (hw2reg.control.clear.d),
 
     // to internal hardware
     .qe(),

@@ -17,6 +17,8 @@
 
 #include <iostream>
 #include <getopt.h>
+#include <random>
+#include <time.h>
 
 // Verilator libraries
 #include <verilated.h>
@@ -36,7 +38,7 @@
 #define END_OF_RESET_TIME 5
 #define MAX_SIM_CYCLES 2e6
 #define MAX_SIM_TIME (MAX_SIM_CYCLES * 2)
-#define WATCHDOG_TIMEOUT 10 // cycles to wait for a program step to complete
+#define WATCHDOG_TIMEOUT 500 // cycles to wait for a program step to complete
 #define END_OF_TEST_TIMEOUT 10 // cycles between done assertion and simulation end
 #define RUN_CYCLES 500
 
@@ -61,12 +63,14 @@ int main(int argc, char *argv[])
     const option longopts[] = {
         {"log_level", required_argument, NULL, 'l'},
         {"gen_waves", required_argument, NULL, 'w'},
+        {"seed", required_argument, NULL, 's'},
         {NULL, 0, NULL, 0}
     };
 
     // Process command-line options
     // ----------------------------
     int opt; // current option
+    int prg_seed = time(NULL);
     bool gen_waves = true;
     while ((opt = getopt_long(argc, argv, "l:w:", longopts, NULL)) >= 0)
     {
@@ -74,6 +78,7 @@ int main(int argc, char *argv[])
         {
         case 'l': // set the log level
             logger.setLogLvl(optarg);
+            TB_CONFIG("Log level set to %s", optarg);
             break;
         case 'w': // generate waves
             if (!strcmp(optarg, "true")) {
@@ -84,6 +89,10 @@ int main(int argc, char *argv[])
                 gen_waves = 0;
                 TB_CONFIG("Waves disabled");
             }
+            break;
+        case 's': // set the seed
+            prg_seed = atoi(optarg);
+            TB_CONFIG("Seed set to %d", prg_seed);
             break;
         default:
             TB_ERR("ERROR: unrecognised option %c.\n", opt);
@@ -121,6 +130,9 @@ int main(int argc, char *argv[])
     ReqMonitor *reqMon = new ReqMonitor(dut, scb);
     RspMonitor *rspMon = new RspMonitor(dut, scb);
 
+    // Initialize PRG
+    srand(prg_seed);
+
     // Simulation program
     // ------------------
     unsigned int step_cnt = 0;
@@ -129,7 +141,9 @@ int main(int argc, char *argv[])
     bool end_of_test = false;
     unsigned int exit_timer = 0; // exit timer
     bool req_accepted = false; // OBI request accepted flag
+    bool irq_received = false; // interrupt received flag
     vluint32_t data = 0;
+    vluint32_t thr = rand() % 64;
     ReqTx *req = NULL;
 
     TB_LOG(LOG_LOW, "Starting simulation...");
@@ -149,23 +163,159 @@ int main(int argc, char *argv[])
             // Set the counter threshold
             case 0:
                 if (!req_accepted) {
-                    data = 15;
-                    TB_LOG(LOG_HIGH, "## Writing counter threshold '%x'...", data);
+                    data = thr;
+                    TB_LOG(LOG_HIGH, "## Writing counter threshold to '%u'...", data);
                     req = genWriteReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET, data, 0xf);
                     break;
                 }
+                req_accepted = false;
                 step_cnt++;
             
             // Read back the threshold value
             case 1:
-                if (!req_accepted)
-                {
+                if (!req_accepted) {
                     TB_LOG(LOG_HIGH, "## Reading counter threshold...");
-                    genReadReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET);
+                    req = genReadReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET);
                     break;
                 }
                 scb->scheduleCheck(data);
+                req_accepted = false;
                 step_cnt++; // and fall through
+            
+            // Read the current counter value
+            case 2:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
+                    break;
+                }
+                scb->scheduleCheck(0);
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Read the TC bit
+            case 3:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading TC bit...");
+                    req = genReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                    break;
+                }
+                scb->scheduleCheck(0);
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Set the counter enable bit
+            case 4:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Enabling counter...");
+                    data = 1 << CNT_CONTROL_CONTROL_ENABLE_BIT;
+                    req = genWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    break;
+                }
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Read back the control register
+            case 5:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading control register...");
+                    req = genReadReqTx(CNT_CONTROL_CONTROL_REG_OFFSET);
+                    break;
+                }
+                scb->scheduleCheck(data);
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Wait some cycles
+            case 6 ... 10:
+                step_cnt++;
+                break;
+
+            // Read counter value
+            case 11:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
+                    break;
+                }
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Wait for interrupt
+            case 12:
+                if (!irq_received) break;
+                TB_LOG(LOG_LOW, "## Interrupt received!");
+                step_cnt++;
+
+            // Read counter value
+            case 13:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
+                    break;
+                }
+                scb->scheduleCheck(0);
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Disable the counter
+            case 14:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Disabling counter...");
+                    data = 0;
+                    req = genWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    break;
+                }
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Wait some cycles
+            case 15 ... 19:
+                step_cnt++;
+                break;
+
+            // Read the counter value
+            case 20:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
+                    break;
+                }
+                scb->scheduleCheck(2);
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Clear the counter
+            case 21:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Clearing counter...");
+                    data = 1 << CNT_CONTROL_CONTROL_CLEAR_BIT;
+                    req = genWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    break;
+                }
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Wait one cycle
+            case 22:
+                step_cnt++;
+                break;
+
+            // Read the counter value
+            case 23:
+                if (!req_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    req = genReadReqTx(CNT_CONTROL_COUNT_REG_OFFSET);
+                    break;
+                }
+                scb->scheduleCheck(0);
+                req_accepted = false;
+                step_cnt++; // and fall through
+
+            // Wait some cycles
+            case 24 ... 29:
+                step_cnt++;
+                break;
 
             default:
                 // Set exit flag
@@ -175,6 +325,8 @@ int main(int argc, char *argv[])
             
             // Drive DUT inputs
             drv->drive(req);
+            delete req;
+            req = NULL;
 
             // Update input signals
             dut->eval();
@@ -183,6 +335,7 @@ int main(int argc, char *argv[])
             reqMon->monitor();
             rspMon->monitor();
             req_accepted = reqMon->accepted();
+            irq_received = rspMon->irq();
 
             // Trigger scheduled checks
             if (scb->checkData() != 0) end_of_test = true;
@@ -218,6 +371,7 @@ int main(int argc, char *argv[])
     if (scb->getErrNum() > 0)
     {
         TB_ERR("CHECKS FAILED > errors: %u/%u", scb->getErrNum(), scb->getTxNum());
+        if (gen_waves) trace->close();
         exit(EXIT_SUCCESS);
     }
     else 

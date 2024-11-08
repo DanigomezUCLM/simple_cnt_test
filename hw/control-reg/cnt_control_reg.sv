@@ -41,8 +41,12 @@ module cnt_control_reg (
   // CONTROL REGISTERS
   // -----------------
   // Counter terminal count
-  assign hw2reg.status.d = cnt_tc_i;
-  assign hw2reg.count.d  = cnt_val_i;
+  assign hw2reg.status.d         = cnt_tc_i;
+  assign hw2reg.count.d          = cnt_val_i;
+
+  // Always auto-reset the clear bit
+  assign hw2reg.control.clear.d  = 1'b0;
+  assign hw2reg.control.clear.de = 1'b1;
 
   // OBI bridge
   cnt_obi_to_reg #(

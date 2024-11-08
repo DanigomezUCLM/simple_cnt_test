@@ -47,8 +47,10 @@ void clkGen(Vcnt_obi *dut);
 void rstDut(Vcnt_obi *dut, vluint64_t sim_time);
 
 // Generate OBI transactions
-ReqTx *genWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, vluint8_t be);
-ReqTx *genReadReqTx(const vluint32_t addr_offs);
+ObiReqTx *genObiWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, vluint8_t be);
+ObiReqTx *genObiReadReqTx(const vluint32_t addr_offs);
+RegReqTx *genRegWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, vluint8_t wstrb);
+RegReqTx *genRegReadReqTx(const vluint32_t addr_offs);
 
 // Run a number of cycles
 void runCycles(unsigned int ncycles, Vcnt_obi *dut, uint8_t gen_waves, VerilatedFstC *trace);
@@ -140,12 +142,19 @@ int main(int argc, char *argv[])
     unsigned int watchdog = 0; // watchdog counter
     bool end_of_test = false;
     unsigned int exit_timer = 0; // exit timer
-    bool req_accepted = false; // OBI request accepted flag
+    bool obi_accepted = false; // OBI request accepted flag
+    bool reg_accepted = false; // OBI request accepted flag
     bool irq_received = false; // interrupt received flag
+    bool obi_check_req = false;
+    vluint32_t obi_check_data = 0;
+    bool reg_check_req = false;
+    vluint32_t reg_check_data = 0;
     vluint32_t data = 0;
-    vluint32_t rdata = 0;
+    vluint32_t obi_rdata = 0;
+    vluint32_t reg_rdata = 0;
     vluint32_t thr = rand() % 63 + 1;
-    ReqTx *req = NULL;
+    ObiReqTx *obi_req = NULL;
+    RegReqTx *reg_req = NULL;
 
     TB_LOG(LOG_LOW, "Starting simulation...");
     while (!cntx->gotFinish() && cntx->time() < MAX_SIM_TIME)
@@ -159,66 +168,80 @@ int main(int argc, char *argv[])
 
         if (dut->clk_i == 1 && cntx->time() > END_OF_RESET_TIME)
         {
+            // Reset check schedule requests
+            obi_check_req = false;
+            reg_check_req = false;
+
             switch (step_cnt)
             {
             // Set the counter threshold
             case 0:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     data = thr;
                     TB_LOG(LOG_HIGH, "## Writing counter threshold to '%u'...", data);
-                    req = genWriteReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET, data, 0xf);
+                    reg_req = genRegWriteReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET, data, 0xf);
                     break;
                 }
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++;
             
             // Read back the threshold value
             case 1:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     TB_LOG(LOG_HIGH, "## Reading counter threshold...");
-                    req = genReadReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET);
+                    reg_req = genRegReadReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET);
+                    reg_check_req = true;
+                    reg_check_data = data;
                     break;
                 }
-                scb->scheduleCheck(data);
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
             
             // Read the current counter value
             case 2:
-                step_cnt++;
-                break;
+                if (!obi_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    obi_req = genObiReadReqTx(0x0);
+                    obi_check_req = true;
+                    obi_check_data = 0;
+                    break;
+                }
+                obi_accepted = false;
+                step_cnt++; // and fall through
 
             // Read the TC bit
             case 3:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     TB_LOG(LOG_HIGH, "## Reading TC bit...");
-                    req = genReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                    reg_req = genRegReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                    reg_check_req = true;
+                    reg_check_data = 0;
                     break;
                 }
-                scb->scheduleCheck(0);
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             // Set the counter enable bit
             case 4:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     TB_LOG(LOG_HIGH, "## Enabling counter...");
                     data = 1 << CNT_CONTROL_CONTROL_ENABLE_BIT;
-                    req = genWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    reg_req = genRegWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
                     break;
                 }
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             // Read back the control register
             case 5:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     TB_LOG(LOG_HIGH, "## Reading control register...");
-                    req = genReadReqTx(CNT_CONTROL_CONTROL_REG_OFFSET);
+                    reg_req = genRegReadReqTx(CNT_CONTROL_CONTROL_REG_OFFSET);
+                    reg_check_req = true;
+                    reg_check_data = data;
                     break;
                 }
-                scb->scheduleCheck(data);
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             // Wait some cycles
@@ -228,8 +251,13 @@ int main(int argc, char *argv[])
 
             // Read counter value
             case 11:
-                step_cnt++;
-                break;
+                if (!obi_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    obi_req = genObiReadReqTx(0x0);
+                    break;
+                }
+                obi_accepted = false;
+                step_cnt++; // and fall through
 
             // Wait for interrupt
             case 12:
@@ -237,52 +265,106 @@ int main(int argc, char *argv[])
                 TB_LOG(LOG_LOW, "## Interrupt received!");
                 step_cnt++;
 
-            // Read counter value
+            // Read the TC bit
             case 13:
-                step_cnt++;
-                break;
-
-            // Disable the counter
-            case 14:
-                if (!req_accepted) {
-                    TB_LOG(LOG_HIGH, "## Disabling counter...");
-                    data = 0;
-                    req = genWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                if (!reg_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading TC bit...");
+                    reg_req = genRegReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                    reg_check_req = true;
+                    reg_check_data = 1;
                     break;
                 }
-                req_accepted = false;
+                reg_accepted = false;
+                step_cnt++; // and fall through
+
+            // Read counter value
+            case 14:
+                if (!obi_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    obi_req = genObiReadReqTx(0x0);
+                    obi_check_req = true;
+                    obi_check_data = 1;
+                    break;
+                }
+                obi_accepted = false;
+                step_cnt++; // and fall through
+
+            // Disable the counter
+            case 15:
+                if (!reg_accepted) {
+                    TB_LOG(LOG_HIGH, "## Disabling counter...");
+                    data = 0;
+                    reg_req = genRegWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    break;
+                }
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             // Wait some cycles
-            case 15 ... 19:
+            case 16:
                 step_cnt++;
                 break;
 
+            // Set the counter value
+            case 17:
+                if (!obi_accepted) {
+                    thr = rand() % 63 + 1;
+                    TB_LOG(LOG_HIGH, "## Writing counter value to '%u'...", thr);
+                    obi_req = genObiWriteReqTx(0x0, thr, 0xf);
+                    break;
+                }
+                obi_accepted = false;
+                step_cnt++; // and fall through
+
             // Read the counter value
+            case 18:
+                if (!obi_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    obi_req = genObiReadReqTx(0x0);
+                    obi_check_req = true;
+                    obi_check_data = thr;
+                    break;
+                }
+                obi_accepted = false;
+                step_cnt++; // and fall through
+
+            // Enable the counter
+            case 19:
+                if (!reg_accepted) {
+                    TB_LOG(LOG_HIGH, "## Enabling counter...");
+                    data = 1 << CNT_CONTROL_CONTROL_ENABLE_BIT;
+                    reg_req = genRegWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    break;
+                }
+                reg_accepted = false;
+                step_cnt++; // and fall through
+
+            // Wait one cycle
             case 20:
                 step_cnt++;
                 break;
 
-            // Read the TC bit
+            // Read the counter value
             case 21:
-                if (!req_accepted) {
-                    TB_LOG(LOG_HIGH, "## Reading TC bit...");
-                    req = genReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                if (!obi_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    obi_req = genObiReadReqTx(0x0);
+                    obi_check_req = true;
+                    obi_check_data = thr + 1;
                     break;
                 }
-                scb->scheduleCheck(1);
-                req_accepted = false;
+                obi_accepted = false;
                 step_cnt++; // and fall through
 
             // Clear the counter
             case 22:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     TB_LOG(LOG_HIGH, "## Clearing counter...");
                     data = 1 << CNT_CONTROL_CONTROL_CLEAR_BIT;
-                    req = genWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    reg_req = genRegWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
                     break;
                 }
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             // Wait one cycle
@@ -292,8 +374,15 @@ int main(int argc, char *argv[])
 
             // Read the counter value
             case 24:
-                step_cnt++;
-                break;
+                if (!obi_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    obi_req = genObiReadReqTx(0x0);
+                    obi_check_req = true;
+                    obi_check_data = 0;
+                    break;
+                }
+                obi_accepted = false;
+                step_cnt++; // and fall through
 
             // Wait some cycles
             case 25 ... 29:
@@ -302,67 +391,80 @@ int main(int argc, char *argv[])
 
             // Set a new threshold
             case 30:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     thr = rand() % 63 + 1;
                     TB_LOG(LOG_HIGH, "## Writing counter threshold to '%u'...", thr);
-                    req = genWriteReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET, thr, 0xf);
+                    reg_req = genRegWriteReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET, thr, 0xf);
                     break;
                 }
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             // Read back the threshold value
             case 31:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     TB_LOG(LOG_HIGH, "## Reading counter threshold...");
-                    req = genReadReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET);
+                    reg_req = genRegReadReqTx(CNT_CONTROL_THRESHOLD_REG_OFFSET);
+                    reg_check_req = true;
+                    reg_check_data = thr;
                     break;
                 }
-                scb->scheduleCheck(thr);
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             // Restart the counter
             case 32:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     TB_LOG(LOG_HIGH, "## Enabling counter...");
                     data = 1 << CNT_CONTROL_CONTROL_ENABLE_BIT;
-                    req = genWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
+                    reg_req = genRegWriteReqTx(CNT_CONTROL_CONTROL_REG_OFFSET, data, 0x1);
                     break;
                 }
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             // Wait for TC in polling
             case 33:
-                if (!req_accepted) {
+                if (!reg_accepted) {
                     TB_LOG(LOG_FULL, "## Polling TC bit...");
-                    req = genReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                    reg_req = genRegReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
                     break;
                 }
-                req_accepted = false;
+                reg_accepted = false;
                 step_cnt++; // and fall through
             
             // Wait for TC in polling
             case 34:
-                if (rdata & (1 << CNT_CONTROL_STATUS_TC_BIT)) {
+                if (reg_rdata & (1 << CNT_CONTROL_STATUS_TC_BIT)) {
                     TB_LOG(LOG_LOW, "## TC bit set!");
                     step_cnt++;
                     break;
                 }
                 TB_LOG(LOG_FULL, "## Polling TC bit...");
-                req = genReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
+                reg_req = genRegReadReqTx(CNT_CONTROL_STATUS_REG_OFFSET);
                 break;
 
-            // Clear TC bit
+            // Read the counter value
             case 35:
-                if (!req_accepted) {
-                    TB_LOG(LOG_HIGH, "## Clearing TC bit...");
-                    data = 1 << CNT_CONTROL_STATUS_TC_BIT;
-                    req = genWriteReqTx(CNT_CONTROL_STATUS_REG_OFFSET, data, 0x1);
+                if (!obi_accepted) {
+                    TB_LOG(LOG_HIGH, "## Reading counter value...");
+                    obi_req = genObiReadReqTx(0x0);
+                    obi_check_req = true;
+                    obi_check_data = 2; // counter resets, but it takes 2 cycles for SW to see TC in polling
                     break;
                 }
-                req_accepted = false;
+                obi_accepted = false;
+                step_cnt++; // and fall through
+
+            // Clear TC bit
+            case 36:
+                if (!reg_accepted) {
+                    TB_LOG(LOG_HIGH, "## Clearing TC bit...");
+                    data = 1 << CNT_CONTROL_STATUS_TC_BIT;
+                    reg_req = genRegWriteReqTx(CNT_CONTROL_STATUS_REG_OFFSET, data, 0x1);
+                    break;
+                }
+                reg_accepted = false;
                 step_cnt++; // and fall through
 
             default:
@@ -372,9 +474,11 @@ int main(int argc, char *argv[])
             }
             
             // Drive DUT inputs
-            drv->drive(req);
-            delete req;
-            req = NULL;
+            drv->drive(obi_req, reg_req);
+            delete obi_req;
+            delete reg_req;
+            obi_req = NULL;
+            reg_req = NULL;
 
             // Update input signals
             dut->eval();
@@ -382,9 +486,18 @@ int main(int argc, char *argv[])
             // Monitor DUT signals
             reqMon->monitor();
             rspMon->monitor();
-            if (rspMon->isDataReady()) rdata = rspMon->getData();
-            req_accepted = reqMon->accepted();
+            
             irq_received = rspMon->irq();
+            obi_accepted = reqMon->acceptedObi();
+            reg_accepted = reqMon->acceptedReg();
+
+            // Schedule checks
+            if (reg_accepted) {
+                reg_rdata = rspMon->getRegData();
+                if (reg_check_req) scb->scheduleRegCheck(reg_check_data);
+            }
+            if (rspMon->isDataReadyObi()) obi_rdata = rspMon->getObiData();
+            if (obi_accepted && obi_check_req) scb->scheduleObiCheck(obi_check_data);
 
             // Trigger scheduled checks
             if (scb->checkData() != 0) end_of_test = true;
@@ -423,16 +536,20 @@ int main(int argc, char *argv[])
         if (gen_waves) trace->close();
         exit(EXIT_SUCCESS);
     }
-    else 
+    else if (!scb->isDone())
     {
-        TB_SUCCESS(LOG_LOW, "CHECKS PASSED > errors: %u (checked %u transactions)", scb->getErrNum(), scb->getTxNum());
+        TB_ERR("CHECKS PENDING > errors: %u/%u", scb->getErrNum(), scb->getTxNum());
+        if (gen_waves) trace->close();
+        exit(EXIT_SUCCESS);
     }
+    TB_SUCCESS(LOG_LOW, "CHECKS PASSED > errors: %u (checked %u transactions)", scb->getErrNum(), scb->getTxNum());
 
     // Clean up and exit
     if (gen_waves) trace->close();
     delete dut;
     delete cntx;
-    delete req;
+    delete obi_req;
+    delete reg_req;
 
     return 0;
 }
@@ -472,9 +589,9 @@ void runCycles(unsigned int ncycles, Vcnt_obi *dut, uint8_t gen_waves, Verilated
 }
 
 // Issue write OBI transaction
-ReqTx *genWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, vluint8_t be)
+ObiReqTx *genObiWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, vluint8_t be)
 {
-    ReqTx *req = new ReqTx;
+    ObiReqTx *req = new ObiReqTx;
 
     // OBI write request
     req->obi_req.req = 1;
@@ -487,9 +604,9 @@ ReqTx *genWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, vluint8
 }
 
 // Issue read OBI transaction
-ReqTx *genReadReqTx(const vluint32_t addr_offs)
+ObiReqTx *genObiReadReqTx(const vluint32_t addr_offs)
 {
-    ReqTx *req = new ReqTx;
+    ObiReqTx *req = new ObiReqTx;
 
     // OBI read request
     req->obi_req.req = 1;
@@ -497,6 +614,36 @@ ReqTx *genReadReqTx(const vluint32_t addr_offs)
     req->obi_req.be = 0xf;
     req->obi_req.addr = addr_offs;
     req->obi_req.wdata = 0;
+
+    return req;
+}
+
+// Issue write register interface transaction
+RegReqTx *genRegWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, vluint8_t wstrb)
+{
+    RegReqTx *req = new RegReqTx;
+
+    // OBI write request
+    req->reg_req.valid = 1;
+    req->reg_req.write = 1;
+    req->reg_req.wstrb = wstrb;
+    req->reg_req.addr = addr_offs;
+    req->reg_req.wdata = wdata;
+
+    return req;
+}
+
+// Issue read register interface transaction
+RegReqTx *genRegReadReqTx(const vluint32_t addr_offs)
+{
+    RegReqTx *req = new RegReqTx;
+
+    // OBI read request
+    req->reg_req.valid = 1;
+    req->reg_req.write = 0;
+    req->reg_req.wstrb = 0xf;
+    req->reg_req.addr = addr_offs;
+    req->reg_req.wdata = 0;
 
     return req;
 }

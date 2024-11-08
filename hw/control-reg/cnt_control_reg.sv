@@ -33,8 +33,6 @@ module cnt_control_reg (
   // Registers <--> Hanrdware counter
   cnt_control_reg_pkg::cnt_control_reg2hw_t reg2hw;
   cnt_control_reg_pkg::cnt_control_hw2reg_t hw2reg;
-  cnt_reg_pkg::reg_req_t                    ctl_reg_req;
-  cnt_reg_pkg::reg_resp_t                   ctl_reg_rsp;
 
   // -----------------
   // CONTROL REGISTERS
@@ -49,22 +47,6 @@ module cnt_control_reg (
   assign hw2reg.control.clear.d  = 1'b0;
   assign hw2reg.control.clear.de = 1'b1;
 
-  // OBI bridge
-  cnt_obi_to_reg #(
-    .DW       (32),
-    .obi_req_t(cnt_obi_pkg::obi_req_t),
-    .obi_rsp_t(cnt_obi_pkg::obi_resp_t),
-    .reg_req_t(cnt_reg_pkg::reg_req_t),
-    .reg_rsp_t(cnt_reg_pkg::reg_resp_t)
-  ) u_cnt_obi_to_reg (
-    .clk_i    (clk_i),
-    .rst_ni   (rst_ni),
-    .obi_req_i(req_i),
-    .obi_rsp_o(rsp_o),
-    .reg_req_o(ctl_reg_req),
-    .reg_rsp_i(ctl_reg_rsp)
-  );
-
   // Registers top module
   cnt_control_reg_top #(
     .reg_req_t(cnt_reg_pkg::reg_req_t),
@@ -72,8 +54,8 @@ module cnt_control_reg (
   ) u_cnt_control_reg_top (
     .clk_i    (clk_i),
     .rst_ni   (rst_ni),
-    .reg_req_i(ctl_reg_req),
-    .reg_rsp_o(ctl_reg_rsp),
+    .reg_req_i(req_i),
+    .reg_rsp_o(rsp_o),
     .reg2hw   (reg2hw),
     .hw2reg   (hw2reg),
     .devmode_i(1'b0)

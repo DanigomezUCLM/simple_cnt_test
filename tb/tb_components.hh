@@ -22,26 +22,44 @@
 #include "obi.hh"
 #include "reg.hh"
 
-class ReqTx
+class ObiReqTx
 {
 public:
     obi_req_t obi_req;
-    reg_req_t reg_req;
 
-    ReqTx();
-    ~ReqTx();
+    ObiReqTx();
+    ~ObiReqTx();
 
     void reset();
 };
 
-class RspTx
+class ObiRspTx
 {
 public:
     obi_rsp_t obi_rsp;
+
+    ObiRspTx();
+    ~ObiRspTx();
+};
+
+class RegReqTx
+{
+public:
+    reg_req_t reg_req;
+
+    RegReqTx();
+    ~RegReqTx();
+
+    void reset();
+};
+
+class RegRspTx
+{
+public:
     reg_rsp_t reg_rsp;
 
-    RspTx();
-    ~RspTx();
+    RegRspTx();
+    ~RegRspTx();
 };
 
 class Drv
@@ -53,31 +71,41 @@ public:
     Drv(Vcnt_obi *dut);
     ~Drv();
 
-    void drive(ReqTx *req);
+    void drive(ObiReqTx *obi_req, RegReqTx *reg_req);
 };
 
 class Scb
 {
 private:
-    std::deque<ReqTx *> req_q;
-    std::deque<RspTx *> rsp_q;
-    std::deque<vluint32_t> exp_q;
+    std::deque<ObiReqTx *> obi_req_q;
+    std::deque<ObiRspTx *> obi_rsp_q;
+    std::deque<vluint32_t> obi_exp_q;
+    std::deque<RegReqTx *> reg_req_q;
+    std::deque<RegRspTx *> reg_rsp_q;
+    std::deque<vluint32_t> reg_exp_q;
     unsigned int tx_num;
     unsigned int err_num;
+
+    int checkObiData();
+    int checkRegData();
 
 public:
     Scb();
     ~Scb();
 
-    void writeReq(ReqTx *req);
-    void writeRsp(RspTx *rsp);
+    void writeObiReq(ObiReqTx *req);
+    void writeObiRsp(ObiRspTx *rsp);
+    void writeRegReq(RegReqTx *req);
+    void writeRegRsp(RegRspTx *rsp);
 
-    bool scheduleCheck(vluint32_t exp_value);
+    bool scheduleObiCheck(vluint32_t exp_value);
+    bool scheduleRegCheck(vluint32_t exp_value);
     int checkData();
     int isDone();
 
     void clearQueues();
-    void popReq();
+    void popObiReq();
+    void popRegReq();
     
     void notifyError();
     unsigned int getTxNum();
@@ -90,12 +118,16 @@ private:
     Vcnt_obi *dut;
     Scb *scb;
 
+    void monitorObi();
+    void monitorReg();
+
 public:
     ReqMonitor(Vcnt_obi *dut, Scb *scb);
     ~ReqMonitor();
 
     void monitor();
-    bool accepted();
+    bool acceptedObi();
+    bool acceptedReg();
 };
 
 class RspMonitor
@@ -103,16 +135,20 @@ class RspMonitor
 private:
     Vcnt_obi *dut;
     Scb *scb;
-    bool pending_read_req[2]; // at most two outstanding requests
+    bool obi_pending_read[2]; // at most two outstanding requests
+
+    void monitorObi();
+    void monitorReg();
 
 public:
     RspMonitor(Vcnt_obi *dut, Scb *scb);
     ~RspMonitor();
 
     void monitor();
-    bool isDataReady();
+    bool isDataReadyObi();
     bool irq();
-    vluint32_t getData();
+    vluint32_t getObiData();
+    vluint32_t getRegData();
 };
 
 #endif // TB_COMPONENTS_HH_

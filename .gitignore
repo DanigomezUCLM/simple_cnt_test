@@ -3,3 +3,6 @@ build
 
 # Private directory
 private/
+
+# Visual Studio Code settings
+.vscode/

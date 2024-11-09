@@ -50,9 +50,8 @@ filesets:
 
   # Waiver files for Verilator
   verilator-waivers:
-    files:
-    - hw/misc/verilator-waivers.vlt
-    file_type: vlt
+    depend:
+      [waivers]
 
   verilator-tb:
     files:
@@ -80,12 +79,18 @@ scripts:
     - "logs/waves.fst"
     - "../../sim-common/"
 
+generate:
+  waivers:
+    generator: gen-waivers
+    parameters:
+
 targets:
   default: &default
     filesets:
     - rtl
     - rtl_vendor ? (rtl-vendor)
-    - target_sim ? (tool_verilator ? (verilator-waivers))
+    # - target_sim ? (tool_verilator ? (verilator-waivers))
+    generate: [waivers]
     toplevel: cnt
 
   sim:

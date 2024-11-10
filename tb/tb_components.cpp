@@ -45,7 +45,7 @@ RegRspTx::~RegRspTx()
 {
 }
 
-Drv::Drv(Vcnt_obi *dut)
+Drv::Drv(Vcnt_tb_wrapper *dut)
 {
     this->dut = dut;
 }
@@ -306,7 +306,7 @@ void Scb::popRegReq()
     delete req;
 }
 
-ReqMonitor::ReqMonitor(Vcnt_obi *dut, Scb *scb)
+ReqMonitor::ReqMonitor(Vcnt_tb_wrapper *dut, Scb *scb)
 {
     this->dut = dut;
     this->scb = scb;
@@ -376,7 +376,7 @@ bool ReqMonitor::acceptedReg()
     return dut->reg_valid_i & dut->reg_ready_o;
 }
 
-RspMonitor::RspMonitor(Vcnt_obi *dut, Scb *scb)
+RspMonitor::RspMonitor(Vcnt_tb_wrapper *dut, Scb *scb)
 {
     this->dut = dut;
     this->scb = scb;

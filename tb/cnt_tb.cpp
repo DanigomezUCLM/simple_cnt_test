@@ -25,7 +25,7 @@
 #include <verilated_fst_c.h>
 
 // DUT header
-#include "Vcnt_obi.h"
+#include "Vcnt_tb_wrapper.h"
 #include "cnt_control_reg.h"
 
 // Testbench components
@@ -43,8 +43,8 @@
 #define RUN_CYCLES 500
 
 // Generate clock and reset
-void clkGen(Vcnt_obi *dut);
-void rstDut(Vcnt_obi *dut, vluint64_t sim_time);
+void clkGen(Vcnt_tb_wrapper *dut);
+void rstDut(Vcnt_tb_wrapper *dut, vluint64_t sim_time);
 
 // Generate OBI transactions
 ObiReqTx *genObiWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, vluint8_t be);
@@ -53,7 +53,7 @@ RegReqTx *genRegWriteReqTx(const vluint32_t addr_offs, const vluint32_t wdata, v
 RegReqTx *genRegReadReqTx(const vluint32_t addr_offs);
 
 // Run a number of cycles
-void runCycles(unsigned int ncycles, Vcnt_obi *dut, uint8_t gen_waves, VerilatedFstC *trace);
+void runCycles(unsigned int ncycles, Vcnt_tb_wrapper *dut, uint8_t gen_waves, VerilatedFstC *trace);
 
 // Global variables
 vluint64_t sim_cycles = 0;
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
     }
 
     // Instantiate DUT
-    Vcnt_obi *dut = new Vcnt_obi(cntx);
+    Vcnt_tb_wrapper *dut = new Vcnt_tb_wrapper(cntx);
 
     // Set the file to store the waveforms in
     VerilatedFstC *trace = NULL;
@@ -554,12 +554,12 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void clkGen(Vcnt_obi *dut)
+void clkGen(Vcnt_tb_wrapper *dut)
 {
     dut->clk_i ^= 1;
 }
 
-void rstDut(Vcnt_obi *dut, vluint64_t sim_time)
+void rstDut(Vcnt_tb_wrapper *dut, vluint64_t sim_time)
 {
     dut->rst_ni = 1;
     if (sim_time > 1 && sim_time < END_OF_RESET_TIME)
@@ -568,7 +568,7 @@ void rstDut(Vcnt_obi *dut, vluint64_t sim_time)
     }
 }
 
-void runCycles(unsigned int ncycles, Vcnt_obi *dut, uint8_t gen_waves, VerilatedFstC *trace)
+void runCycles(unsigned int ncycles, Vcnt_tb_wrapper *dut, uint8_t gen_waves, VerilatedFstC *trace)
 {
     VerilatedContext *cntx = dut->contextp();
     for (unsigned int i = 0; i < (2 * ncycles); i++)

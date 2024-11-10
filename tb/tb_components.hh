@@ -18,7 +18,7 @@
 #define TB_COMPONENTS_HH_
 
 #include <verilated.h>
-#include "Vcnt_obi.h"
+#include "Vcnt_tb_wrapper.h"
 #include "obi.hh"
 #include "reg.hh"
 
@@ -65,10 +65,10 @@ public:
 class Drv
 {
 private:
-    Vcnt_obi *dut;
+    Vcnt_tb_wrapper *dut;
 
 public:
-    Drv(Vcnt_obi *dut);
+    Drv(Vcnt_tb_wrapper *dut);
     ~Drv();
 
     void drive(ObiReqTx *obi_req, RegReqTx *reg_req);
@@ -115,14 +115,14 @@ public:
 class ReqMonitor
 {
 private:
-    Vcnt_obi *dut;
+    Vcnt_tb_wrapper *dut;
     Scb *scb;
 
     void monitorObi();
     void monitorReg();
 
 public:
-    ReqMonitor(Vcnt_obi *dut, Scb *scb);
+    ReqMonitor(Vcnt_tb_wrapper *dut, Scb *scb);
     ~ReqMonitor();
 
     void monitor();
@@ -133,7 +133,7 @@ public:
 class RspMonitor
 {
 private:
-    Vcnt_obi *dut;
+    Vcnt_tb_wrapper *dut;
     Scb *scb;
     bool obi_pending_read[2]; // at most two outstanding requests
 
@@ -141,7 +141,7 @@ private:
     void monitorReg();
 
 public:
-    RspMonitor(Vcnt_obi *dut, Scb *scb);
+    RspMonitor(Vcnt_tb_wrapper *dut, Scb *scb);
     ~RspMonitor();
 
     void monitor();

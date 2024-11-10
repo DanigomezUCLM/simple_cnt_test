@@ -21,24 +21,12 @@ module cnt_obi #(
   input logic rst_ni,
 
   // OBI interface (counter value)
-  input  logic        obi_req_i,
-  input  logic        obi_we_i,
-  input  logic [ 3:0] obi_be_i,
-  input  logic [31:0] obi_addr_i,
-  input  logic [31:0] obi_wdata_i,
-  output logic        obi_gnt_o,
-  output logic        obi_rvalid_o,
-  output logic [31:0] obi_rdata_o,
+  input  cnt_obi_pkg::obi_req_t  obi_req_i,
+  output cnt_obi_pkg::obi_resp_t obi_rsp_o,
 
   // Register Interface (configuration registers)
-  input  logic        reg_valid_i,
-  input  logic        reg_write_i,
-  input  logic [ 3:0] reg_wstrb_i,
-  input  logic [31:0] reg_addr_i,
-  input  logic [31:0] reg_wdata_i,
-  output logic        reg_error_o,
-  output logic        reg_ready_o,
-  output logic [31:0] reg_rdata_o,
+  input  cnt_reg_pkg::reg_req_t  reg_req_i,
+  output cnt_reg_pkg::reg_resp_t reg_rsp_o,
 
   // Terminal count interrupt
   output logic tc_int_o  // interrupt to host system
@@ -46,20 +34,18 @@ module cnt_obi #(
   // INTERNAL SIGNALS
   // ----------------
   // Bus request and response
-  logic                           obi_gnt;
-  logic                           obi_rvalid_q;
-  logic                   [W-1:0] obi_rdata_q;
-  cnt_reg_pkg::reg_req_t          reg_req;  // from host system
-  cnt_reg_pkg::reg_resp_t         reg_rsp;  // to host system
+  logic         obi_gnt;
+  logic         obi_rvalid_q;
+  logic [W-1:0] obi_rdata_q;
 
   // Registers <--> Hanrdware counter
-  logic                           cnt_en;
-  logic                           cnt_clr;
-  logic                           cnt_ld;
-  logic                   [W-1:0] cnt_ld_val;
-  logic                   [W-1:0] cnt_val;
-  logic                   [ 31:0] cnt_thr;
-  logic                           cnt_tc;
+  logic         cnt_en;
+  logic         cnt_clr;
+  logic         cnt_ld;
+  logic [W-1:0] cnt_ld_val;
+  logic [W-1:0] cnt_val;
+  logic [ 31:0] cnt_thr;
+  logic         cnt_tc;
 
   // --------------
   // COUNTER MODULE
@@ -85,11 +71,11 @@ module cnt_obi #(
   // OBI bridge to counter value
   // ---------------------------
   // Bus write request logic
-  assign cnt_ld     = obi_req_i & obi_we_i & (&obi_be_i) & ~(|obi_addr_i);
-  assign cnt_ld_val = obi_wdata_i[W-1:0];
+  assign cnt_ld     = obi_req_i.req & obi_req_i.we & (&obi_req_i.be) & ~(|obi_req_i.addr);
+  assign cnt_ld_val = obi_req_i.wdata[W-1:0];
 
   // Bus response logic
-  assign obi_gnt    = obi_req_i & ~cnt_clr;  // accept a load request if not being cleared
+  assign obi_gnt    = obi_req_i.req & ~cnt_clr;  // accept a load request if not being cleared
   always_ff @(posedge clk_i or negedge rst_ni) begin : rvalid_ff
     if (!rst_ni) begin
       obi_rvalid_q <= 1'b0;
@@ -101,38 +87,22 @@ module cnt_obi #(
   end
 
   // Bus signals
-  assign obi_gnt_o = obi_gnt;
-  assign obi_rvalid_o = obi_rvalid_q;
-  assign obi_rdata_o = {{32 - W{1'b0}}, obi_rdata_q};
+  assign obi_rsp_o = '{gnt: obi_gnt, rvalid: obi_rvalid_q, rdata: {{32 - W{1'b0}}, obi_rdata_q}};
 
   // -----------------
   // CONTROL REGISTERS
   // -----------------
-  // Bus request
-  assign reg_req = '{
-          valid: reg_valid_i,
-          write: reg_write_i,
-          wstrb: reg_wstrb_i,
-          addr: reg_addr_i,
-          wdata: reg_wdata_i
-      };
-
   // Control registers
   cnt_control_reg u_cnt_control_reg (
     .clk_i    (clk_i),
     .rst_ni   (rst_ni),
-    .req_i    (reg_req),
-    .rsp_o    (reg_rsp),
+    .req_i    (reg_req_i),
+    .rsp_o    (reg_rsp_o),
     .cnt_tc_i (cnt_tc),
     .cnt_en_o (cnt_en),
     .cnt_clr_o(cnt_clr),
     .cnt_thr_o(cnt_thr)
   );
-
-  // Bus response
-  assign reg_error_o = reg_rsp.error;
-  assign reg_ready_o = reg_rsp.ready;
-  assign reg_rdata_o = reg_rsp.rdata;
 
   // ----------
   // ASSERTIONS

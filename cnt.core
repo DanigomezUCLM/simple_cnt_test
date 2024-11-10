@@ -15,13 +15,14 @@ CAPI=2:
 # Date: 08/11/2024
 # Description: Counter core file for FuseSoC
 
-name: polito:isa-lab:cnt:1.0.0
+name: polito:isa-lab:cnt:1.1.0
 description: Basic example of a counter peripheral
 
 filesets:
   # RTL description
   rtl:
     files:
+    - hw/packages/cnt_obi_pkg.sv
     - hw/packages/cnt_reg_pkg.sv
     - hw/control-reg/rtl/cnt_control_reg_pkg.sv
     - hw/control-reg/rtl/cnt_control_reg_top.sv
@@ -50,12 +51,12 @@ filesets:
 
   # Waiver files for Verilator
   verilator-waivers:
-    files:
-    - hw/misc/verilator-waivers.vlt
-    file_type: vlt
+    depend:
+      - polito:isa-lab:gen-waivers
 
   verilator-tb:
     files:
+    - tb/cnt_tb_wrapper.sv: {file_type: systemVerilogSource}
     - tb/cnt_tb.cpp
     - tb/tb_macros.cpp
     - tb/tb_components.cpp
@@ -80,19 +81,28 @@ scripts:
     - "logs/waves.fst"
     - "../../sim-common/"
 
+generate:
+  waivers:
+    generator: gen-waivers
+    parameters:
+      version: 5
+
 targets:
   default: &default
     filesets:
     - rtl
     - rtl_vendor ? (rtl-vendor)
     - target_sim ? (tool_verilator ? (verilator-waivers))
+    generate: [waivers]
     toplevel: cnt
 
   sim:
     <<: *default
     description: Simulate the design
     default_tool: verilator
-    toplevel: cnt_obi
+    toplevel:
+    - "tool_verilator ? (cnt_tb_wrapper)"
+    - "!tool_verilator ? (cnt_obi)"
     filesets_append:
     - verilator-tb
     flags:
@@ -127,7 +137,8 @@ targets:
 
   # Format with Verible
   format:
-    <<: *default
+    filesets:
+    - rtl
     description: Format source files using verible-verilog-format
     default_tool: veribleformat
     toplevel: cnt_obi
@@ -149,7 +160,8 @@ targets:
 
   # Static analysis
   lint:
-    <<: *default
+    filesets:
+    - rtl
     description: Perform static analysis using Verible
     default_tool: veriblelint
     toplevel: cnt_obi

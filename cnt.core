@@ -15,7 +15,7 @@ CAPI=2:
 # Date: 08/11/2024
 # Description: Counter core file for FuseSoC
 
-name: polito:isa-lab:cnt:1.0.0
+name: polito:isa-lab:cnt:1.1.0
 description: Basic example of a counter peripheral
 
 filesets:

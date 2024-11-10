@@ -5,5 +5,5 @@ description: Verilator waiver files generator
 
 generators:
   gen-waivers:
-    interpreter: bash
-    command: hw/misc/gen-waivers.sh
+    interpreter: python3
+    command: gen-waivers.py

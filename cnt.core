@@ -51,7 +51,7 @@ filesets:
   # Waiver files for Verilator
   verilator-waivers:
     depend:
-      [waivers]
+      - polito:isa-lab:gen-waivers
 
   verilator-tb:
     files:
@@ -83,13 +83,14 @@ generate:
   waivers:
     generator: gen-waivers
     parameters:
+      version: 5
 
 targets:
   default: &default
     filesets:
     - rtl
     - rtl_vendor ? (rtl-vendor)
-    # - target_sim ? (tool_verilator ? (verilator-waivers))
+    - target_sim ? (tool_verilator ? (verilator-waivers))
     generate: [waivers]
     toplevel: cnt
 
@@ -132,7 +133,8 @@ targets:
 
   # Format with Verible
   format:
-    <<: *default
+    filesets:
+    - rtl
     description: Format source files using verible-verilog-format
     default_tool: veribleformat
     toplevel: cnt_obi
@@ -154,7 +156,8 @@ targets:
 
   # Static analysis
   lint:
-    <<: *default
+    filesets:
+    - rtl
     description: Perform static analysis using Verible
     default_tool: veriblelint
     toplevel: cnt_obi

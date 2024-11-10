@@ -29,6 +29,10 @@ endif
 
 # ----- TARGETS ----- #
 
+## Default target
+.PHONY: all
+all: lint format verilator-sim
+
 ## @section Verilator RTL simulation
 
 ## Build simulation model (do not launch simulation)

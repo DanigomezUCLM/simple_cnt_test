@@ -8,11 +8,11 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 //
-// File: verilator-waivers-v5.vlt
+// File: verilator-waivers-v4.vlt
 // Author(s):
 //   Michele Caon
 // Date: 07/11/2024
-// Description: Waivers for Verilator v5.XXX
+// Description: Waivers for Verilator v4.XXX
 
 `verilator_config
 // Regtool automatically-generated files
@@ -23,5 +23,5 @@ lint_off -rule WIDTH -file "*/cnt_control_reg_top.sv" -match "Operator ASSIGNW e
 lint_off -rule PINCONNECTEMPTY -file "*/prim_subreg_shadow.sv" -match "Cell pin connected by name with empty reference: '*'"
 
 // OBI bridge
-lint_off -rule UNUSEDSIGNAL -file "*/cnt_obi.sv" -match "Bits of signal are not used: 'cnt_thr'*"
-lint_off -rule UNUSEDSIGNAL -file "*/cnt_obi.sv" -match "Bits of signal are not used: 'obi_wdata_i'*"
+lint_off -rule UNUSED -file "*/cnt_obi.sv" -match "Bits of signal are not used: 'cnt_thr'*"
+lint_off -rule UNUSED -file "*/cnt_obi.sv" -match "Bits of signal are not used: 'obi_wdata_i'*"

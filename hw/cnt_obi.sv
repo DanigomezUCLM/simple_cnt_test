@@ -31,6 +31,9 @@ module cnt_obi #(
   // Terminal count interrupt
   output logic tc_int_o  // interrupt to host system
 );
+  // Address mask for the OBI counter value request
+  localparam OBI_ADDR_MASK = 32'h0000_0001;
+
   // INTERNAL SIGNALS
   // ----------------
   // Bus request and response
@@ -71,7 +74,7 @@ module cnt_obi #(
   // OBI bridge to counter value
   // ---------------------------
   // Bus write request logic
-  assign cnt_ld     = obi_req_i.req & obi_req_i.we & (&obi_req_i.be) & ~(|obi_req_i.addr);
+  assign cnt_ld     = obi_req_i.req & obi_req_i.we & (&obi_req_i.be) & ~(|(obi_req_i.addr & OBI_ADDR_MASK));
   assign cnt_ld_val = obi_req_i.wdata[W-1:0];
 
   // Bus response logic

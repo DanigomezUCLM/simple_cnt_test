@@ -132,8 +132,6 @@ targets:
         - 'cnt_tb.cpp'
         - '-Wall'
         - '-Wpedantic'
-        - '-LDFLAGS "-pthread -lutil -lelf"'
-        - '-CFLAGS "-Wall"'
 
   # Format with Verible
   format:

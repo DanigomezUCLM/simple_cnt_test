@@ -4,7 +4,7 @@ Simple software-controlled up counter with OBI bus interface for the counter val
 
 ## Register layout
 
-The counter is controlled using the control and status registers documented [here](./sw/cnt_control_reg.html).
+The counter is controlled using the control and status registers documented [here](./sw/cnt_control_reg.md).
 
 ## TODO:
 

@@ -10,4 +10,5 @@ printf -- "Generating control registers RTL...\n"
 $REGTOOL -r -t $RTL_DIR $HJSON_FILE
 printf -- "Generating software header...\n"
 $REGTOOL --cdefines -o $SW_DIR/cnt_control_reg.h $HJSON_FILE
+$REGTOOL -d $HJSON_FILE > $SW_DIR/cnt_control_reg.md
 echo "" >> $SW_DIR/cnt_control_reg.h

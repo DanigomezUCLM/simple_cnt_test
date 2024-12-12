@@ -69,7 +69,7 @@ module cnt_obi #(
   );
 
   // Interrupt to host system
-  assign tc_int_o   = cnt_tc;
+  assign tc_int_o = cnt_tc;
 
   // OBI bridge to counter value
   // ---------------------------
@@ -78,7 +78,7 @@ module cnt_obi #(
   assign cnt_ld_val = obi_req_i.wdata[W-1:0];
 
   // Bus response logic
-  assign obi_gnt    = obi_req_i.req & ~cnt_clr;  // accept a load request if not being cleared
+  assign obi_gnt = obi_req_i.req & ~cnt_clr;  // accept a load request if not being cleared
   always_ff @(posedge clk_i or negedge rst_ni) begin : rvalid_ff
     if (!rst_ni) begin
       obi_rvalid_q <= 1'b0;

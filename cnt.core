@@ -93,7 +93,7 @@ targets:
     - rtl
     - rtl_vendor ? (rtl-vendor)
     - target_sim ? (tool_verilator ? (verilator-waivers))
-    generate: [waivers]
+    - generate: [target_sim ? (tool_verilator ? (waivers))]
     toplevel: cnt
 
   sim:

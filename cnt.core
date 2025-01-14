@@ -15,7 +15,7 @@ CAPI=2:
 # Date: 08/11/2024
 # Description: Counter core file for FuseSoC
 
-name: polito:isa-lab:cnt:1.1.0
+name: polito:isa-lab:cnt:1.2.4
 description: Basic example of a counter peripheral
 
 filesets:
@@ -93,7 +93,7 @@ targets:
     - rtl
     - rtl_vendor ? (rtl-vendor)
     - target_sim ? (tool_verilator ? (verilator-waivers))
-    - generate: [target_sim ? (tool_verilator ? (waivers))]
+    generate: [target_sim ? (tool_verilator ? (waivers))]
     toplevel: cnt
 
   sim:

@@ -68,7 +68,9 @@ module cnt #(
       end
       else if (update_nivel_bajo) begin
         update_nivel_bajo <= 0;
-        ciclos_nivel_bajo <= thr_i - ciclos_nivel_alto;
+        if (ciclos_nivel_alto > 0) ciclos_nivel_alto <= ciclos_nivel_alto - 1;
+        if (ciclos_nivel_alto == thr_i) ciclos_nivel_bajo <= 0;
+        else ciclos_nivel_bajo <= thr_i - ciclos_nivel_alto - 1;
       end
       else if (en_i) begin
         if (tc) begin
